@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
     if(server == -1)
     {
         perror("fork");
-        kill(server, SIGINT);
         close(socket);
         exit(EXIT_FAILURE);
     }
@@ -60,3 +59,15 @@ int main(int argc, char *argv[])
     close(socket);
     close(server);
 }
+
+// read_packet(packet)
+//
+// switch
+// case svr_start
+// 	if server is already alive rn - return alive
+// 	if server is not alive - start up server, return alive if successful(?)
+// case svr_stop
+//  if server is not alive - return dead
+// 	if server is alive - kill and wait, return dead if successful(?)
+//
+// both of these cases should time out maybe if they fail
