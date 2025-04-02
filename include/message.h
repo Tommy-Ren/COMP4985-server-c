@@ -30,6 +30,8 @@
 
 #define UNKNOWNTYPE "Unknown Type"
 
+// Global protocol state variables.
+// These are mutable at runtime so cannot be made const.
 extern uint16_t user_count;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 extern uint32_t msg_count;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 extern int      user_index;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -92,48 +94,47 @@ typedef enum
     EC_REQ_TIMEOUT = 0x20
 } error_code_t;
 
-/* Message */
+/* Message structure for protocol packets */
 typedef struct message_t
 {
     // Header (6 bytes)
-    uint8_t  type;        // Packet type (1 byte)    // cppcheck-suppress unusedStructMember
-    uint8_t  version;     // Protocol version (1 byte)    // cppcheck-suppress unusedStructMember
-    uint16_t sender_id;   // Sender ID (2 bytes)    // cppcheck-suppress unusedStructMember
-    uint16_t payload_len; // Payload length (2 bytes)    // cppcheck-suppress unusedStructMember
+    uint8_t  type __attribute__((unused));        // Packet type (1 byte)
+    uint8_t  version __attribute__((unused));       // Protocol version (1 byte)
+    uint16_t sender_id __attribute__((unused));     // Sender ID (2 bytes)
+    uint16_t payload_len __attribute__((unused));   // Payload length (2 bytes)
 
-    // Request
-    void *req_buf;        // Request buffer    // cppcheck-suppress unusedStructMember
+    // Request buffer
+    void *req_buf __attribute__((unused));          // Request buffer
 
-    // Response
-    void    *res_buf;         // Response buffer    // cppcheck-suppress unusedStructMember
-    uint16_t response_len;    // Response length    // cppcheck-suppress unusedStructMember
+    // Response buffer
+    void    *res_buf __attribute__((unused));       // Response buffer
+    uint16_t response_len __attribute__((unused));    // Response length
 
-    // Shared
-    error_code_t   code;         // Error code    // cppcheck-suppress unusedStructMember
-    struct pollfd *client;       // Client fd    // cppcheck-suppress unusedStructMember
-    int           *client_id;    // Client ID    // cppcheck-suppress unusedStructMember
-    struct pollfd *fds;          // Poll file descriptor    // cppcheck-suppress unusedStructMember
+    // Shared fields
+    error_code_t   code __attribute__((unused));      // Error code
+    struct pollfd *client __attribute__((unused));    // Client file descriptor
+    int           *client_id __attribute__((unused)); // Client ID
+    struct pollfd *fds __attribute__((unused));       // Poll file descriptors
 } message_t;
 
 typedef struct
 {
-    error_code_t code; // cppcheck-suppress unusedStructMember
-    const char  *msg;  // cppcheck-suppress unusedStructMember
+    error_code_t code __attribute__((unused)); // Error code
+    const char  *msg __attribute__((unused));  // Error message
 } error_code_map;
 
 typedef enum
 {
-    // Manager
+    // Manager responses and server diagnostics
     MAN_SUCCESS = 0x00,
     MAN_ERROR   = 0x01,
 
-    // Server Diagnostics
     SVR_DIAGNOSTIC = 0x0A,
     USR_ONLINE     = 0x0B,
     SVR_ONLINE     = 0x0C,
     SVR_OFFLINE    = 0x0D,
 
-    // Server Commands
+    // Server commands
     SVR_START = 0x14,
     SVR_STOP  = 0x15,
 } sm_type_t;
