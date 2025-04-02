@@ -31,10 +31,13 @@
 #define UNKNOWNTYPE "Unknown Type"
 
 // Global protocol state variables.
-// These are mutable at runtime so cannot be made const.
-extern uint16_t user_count;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-extern uint32_t msg_count;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-extern int      user_index;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+// Suppress warnings about non-const globals for protocol state:
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern uint16_t user_count;    // Global user count
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern uint32_t msg_count;    // Global message count
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern int user_index;    // Global user index
 
 typedef enum
 {
@@ -98,34 +101,34 @@ typedef enum
 typedef struct message_t
 {
     // Header (6 bytes)
-    uint8_t  type __attribute__((unused));        // Packet type (1 byte)
-    uint8_t  version __attribute__((unused));       // Protocol version (1 byte)
-    uint16_t sender_id __attribute__((unused));     // Sender ID (2 bytes)
-    uint16_t payload_len __attribute__((unused));   // Payload length (2 bytes)
+    uint8_t  type;           // Packet type (1 byte)    // cppcheck-suppress unusedStructMember
+    uint8_t  version;        // Protocol version (1 byte)    // cppcheck-suppress unusedStructMember
+    uint16_t sender_id;      // Sender ID (2 bytes)    // cppcheck-suppress unusedStructMember
+    uint16_t payload_len;    // Payload length (2 bytes)    // cppcheck-suppress unusedStructMember
 
     // Request buffer
-    void *req_buf __attribute__((unused));          // Request buffer
+    void *req_buf;    // Request buffer    // cppcheck-suppress unusedStructMember
 
     // Response buffer
-    void    *res_buf __attribute__((unused));       // Response buffer
-    uint16_t response_len __attribute__((unused));    // Response length
+    void    *res_buf;         // Response buffer    // cppcheck-suppress unusedStructMember
+    uint16_t response_len;    // Response length    // cppcheck-suppress unusedStructMember
 
     // Shared fields
-    error_code_t   code __attribute__((unused));      // Error code
-    struct pollfd *client __attribute__((unused));    // Client file descriptor
-    int           *client_id __attribute__((unused)); // Client ID
-    struct pollfd *fds __attribute__((unused));       // Poll file descriptors
+    error_code_t   code;         // Error code    // cppcheck-suppress unusedStructMember
+    struct pollfd *client;       // Client file descriptor    // cppcheck-suppress unusedStructMember
+    int           *client_id;    // Client ID    // cppcheck-suppress unusedStructMember
+    struct pollfd *fds;          // Poll file descriptors    // cppcheck-suppress unusedStructMember
 } message_t;
 
 typedef struct
 {
-    error_code_t code __attribute__((unused)); // Error code
-    const char  *msg __attribute__((unused));  // Error message
+    error_code_t code;    // cppcheck-suppress unusedStructMember
+    const char  *msg;     // cppcheck-suppress unusedStructMember
 } error_code_map;
 
 typedef enum
 {
-    // Manager responses and server diagnostics
+    // Manager and diagnostics
     MAN_SUCCESS = 0x00,
     MAN_ERROR   = 0x01,
 
