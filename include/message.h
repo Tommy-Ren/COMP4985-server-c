@@ -30,9 +30,9 @@
 
 #define UNKNOWNTYPE "Unknown Type"
 
-extern uint16_t user_count;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
-extern uint32_t msg_count;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
-extern int      user_index;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
+extern uint16_t user_count; // cppcheck-suppress unusedStructMember
+extern uint32_t msg_count;  // cppcheck-suppress unusedStructMember
+extern int      user_index; // cppcheck-suppress unusedStructMember
 
 typedef enum
 {
@@ -92,33 +92,33 @@ typedef enum
     EC_REQ_TIMEOUT = 0x20
 } error_code_t;
 
-/* Message*/
+/* Message */
 typedef struct message_t
 {
     // Header (6 bytes)
-    uint8_t  type;           // Packet type (1 byte)
-    uint8_t  version;        // Protocol version (1 byte)
-    uint16_t sender_id;      // Sender ID (2 bytes)
-    uint16_t payload_len;    // Payload length (2 bytes)
+    uint8_t  type;        // Packet type (1 byte)    // cppcheck-suppress unusedStructMember
+    uint8_t  version;     // Protocol version (1 byte)    // cppcheck-suppress unusedStructMember
+    uint16_t sender_id;   // Sender ID (2 bytes)    // cppcheck-suppress unusedStructMember
+    uint16_t payload_len; // Payload length (2 bytes)    // cppcheck-suppress unusedStructMember
 
     // Request
-    void *req_buf;    // Request buffer
+    void *req_buf;        // Request buffer    // cppcheck-suppress unusedStructMember
 
-    // Resonse
-    void    *res_buf;         // Response buffer
-    uint16_t response_len;    // Response length
+    // Response
+    void    *res_buf;         // Response buffer    // cppcheck-suppress unusedStructMember
+    uint16_t response_len;    // Response length    // cppcheck-suppress unusedStructMember
 
     // Shared
-    error_code_t   code;         // Error code
-    struct pollfd *client;       // Client fd
-    int           *client_id;    // Client ID
-    struct pollfd *fds;          // Poll file descriptor
+    error_code_t   code;         // Error code    // cppcheck-suppress unusedStructMember
+    struct pollfd *client;       // Client fd    // cppcheck-suppress unusedStructMember
+    int           *client_id;    // Client ID    // cppcheck-suppress unusedStructMember
+    struct pollfd *fds;          // Poll file descriptor    // cppcheck-suppress unusedStructMember
 } message_t;
 
 typedef struct
 {
-    error_code_t code;
-    const char  *msg;
+    error_code_t code; // cppcheck-suppress unusedStructMember
+    const char  *msg;  // cppcheck-suppress unusedStructMember
 } error_code_map;
 
 typedef enum

@@ -1,6 +1,7 @@
 #ifndef USER_DB_H
 #define USER_DB_H
 #include <inttypes.h>
+#include <string.h>  // for strlen
 
 #ifdef __APPLE__
     #include <ndbm.h>
@@ -25,13 +26,12 @@ typedef struct
 } const_datum;
 
 #define MAKE_CONST_DATUM(str) ((const_datum){(str), (datum_size)strlen(str) + 1})
-
 #define MAKE_CONST_DATUM_BYTE(str, size) ((const_datum){(str), (datum_size)(size)})
 
 typedef struct DBO
 {
-    char *name;
-    DBM  *db;
+    char *name; // cppcheck-suppress unusedStructMember
+    DBM  *db;   // cppcheck-suppress unusedStructMember
 } DBO;
 
 /* Opens the database specified in dbo->name in read/write mode (creating it if needed).
@@ -42,12 +42,12 @@ ssize_t database_open(DBO *dbo);
    Returns 0 on success, -1 on failure. */
 int store_string(DBM *db, const char *key, const char *value);
 
-/* This function takes an integer array and its size as input,
- * and returns the sum of all the elements in the array.*/
+/* Stores an integer value in the DBM.
+   Returns 0 on success, -1 on failure. */
 int store_int(DBM *db, const char *key, int value);
 
-/* This function takes an integer array and its size as input,
- * and returns the maximum value found in the array.*/
+/* Stores raw bytes in the DBM.
+   Returns 0 on success, -1 on failure. */
 int store_byte(DBM *db, const void *key, size_t k_size, const void *value, size_t v_size);
 
 /* Retrieves the stored string value associated with key from the given DBM.
@@ -55,14 +55,15 @@ int store_byte(DBM *db, const void *key, size_t k_size, const void *value, size_
    returns NULL if the key is not found or on error. */
 char *retrieve_string(DBM *db, const char *key);
 
-/* This function takes an integer array and its size as input,
- * and returns the sum of all the elements in the array.*/
+/* Retrieves an integer from the DBM.
+   Returns 0 on success, -1 on failure. */
 int retrieve_int(DBM *db, const char *key, int *result);
 
-/* This function takes two integer parameters and returns their sum.*/
+/* Retrieves raw bytes from the DBM.
+   Returns pointer on success, or NULL if not found. */
 void *retrieve_byte(DBM *db, const void *key, size_t size);
 
 /* Initializes the primary key in the database. Returns 0 on success, -1 on failure. */
 ssize_t init_pk(DBO *dbo, const char *pk_name);
 
-#endif    // DATABASE_H
+#endif    // USER_DB_H

@@ -6,10 +6,10 @@
 // struct to hold the arguments
 typedef struct Arguments
 {
-    const char *ip;
-    in_port_t   port;
-    const char *sm_ip;
-    in_port_t   sm_port;
+    const char *ip;      // cppcheck-suppress unusedStructMember
+    in_port_t   port;    // cppcheck-suppress unusedStructMember
+    const char *sm_ip;   // cppcheck-suppress unusedStructMember
+    in_port_t   sm_port; // cppcheck-suppress unusedStructMember
 } Arguments;
 
 // prints usage message and exits
