@@ -30,9 +30,9 @@
 
 #define UNKNOWNTYPE "Unknown Type"
 
-extern uint16_t user_count; // cppcheck-suppress unusedStructMember
-extern uint32_t msg_count;  // cppcheck-suppress unusedStructMember
-extern int      user_index; // cppcheck-suppress unusedStructMember
+extern uint16_t user_count;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+extern uint32_t msg_count;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+extern int      user_index;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 typedef enum
 {
