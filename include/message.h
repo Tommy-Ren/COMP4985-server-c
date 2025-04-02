@@ -100,25 +100,40 @@ typedef enum
 /* Message structure for protocol packets */
 typedef struct message_t
 {
-    // Header (6 bytes)
-    uint8_t  type;           // Packet type (1 byte)    // cppcheck-suppress unusedStructMember
-    uint8_t  version;        // Protocol version (1 byte)    // cppcheck-suppress unusedStructMember
-    uint16_t sender_id;      // Sender ID (2 bytes)    // cppcheck-suppress unusedStructMember
-    uint16_t payload_len;    // Payload length (2 bytes)    // cppcheck-suppress unusedStructMember
-
-    // Request buffer
-    void *req_buf;    // Request buffer    // cppcheck-suppress unusedStructMember
-
-    // Response buffer
-    void    *res_buf;         // Response buffer    // cppcheck-suppress unusedStructMember
-    uint16_t response_len;    // Response length    // cppcheck-suppress unusedStructMember
-
-    // Shared fields
-    error_code_t   code;         // Error code    // cppcheck-suppress unusedStructMember
-    struct pollfd *client;       // Client file descriptor    // cppcheck-suppress unusedStructMember
-    int           *client_id;    // Client ID    // cppcheck-suppress unusedStructMember
-    struct pollfd *fds;          // Poll file descriptors    // cppcheck-suppress unusedStructMember
+    /* cppcheck-suppress unusedStructMember */
+    uint8_t type;           // Packet type (1 byte)
+    
+    /* cppcheck-suppress unusedStructMember */
+    uint8_t version;        // Protocol version (1 byte)
+    
+    /* cppcheck-suppress unusedStructMember */
+    uint16_t sender_id;     // Sender ID (2 bytes)
+    
+    /* cppcheck-suppress unusedStructMember */
+    uint16_t payload_len;   // Payload length (2 bytes)
+    
+    /* cppcheck-suppress unusedStructMember */
+    void *req_buf;          // Request buffer
+    
+    /* cppcheck-suppress unusedStructMember */
+    void *res_buf;          // Response buffer
+    
+    /* cppcheck-suppress unusedStructMember */
+    uint16_t response_len;  // Response length
+    
+    /* cppcheck-suppress unusedStructMember */
+    error_code_t code;      // Error code
+    
+    /* cppcheck-suppress unusedStructMember */
+    struct pollfd *client;  // Client file descriptor
+    
+    /* cppcheck-suppress unusedStructMember */
+    int *client_id;         // Client ID
+    
+    /* cppcheck-suppress unusedStructMember */
+    struct pollfd *fds;     // Poll file descriptors
 } message_t;
+
 
 typedef struct
 {
