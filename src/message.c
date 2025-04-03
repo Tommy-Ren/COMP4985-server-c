@@ -251,7 +251,7 @@ static ssize_t handle_package(message_t *message)
     }
 
     // Reallocate buffer to fit the payload
-    tmp = realloc(message->req_buf,(size_t)(message->payload_len+ HEADERLEN));
+    tmp = realloc(message->req_buf, (size_t)(message->payload_len + HEADERLEN));
     if(!tmp)
     {
         perror("Failed to reallocate message body\n");

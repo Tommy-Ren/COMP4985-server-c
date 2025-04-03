@@ -21,18 +21,19 @@
 /* Use the protocol version defined in our message header */
 #define PROTOCOL_VERSION VERSION_NUM
 
+Arguments global_args;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
+
 int main(int argc, char *argv[])
 {
-    Arguments     args;
     int           sm_socket;
     int           child_pid = -1;
     unsigned char req[MSG_LEN];
 
-    parse_args(argc, argv, &args);
-    args.sm_port = SM_PORT;    // hard coded server manager port
+    parse_args(argc, argv, &global_args);
+    global_args.sm_port = SM_PORT;    // hard coded server manager port
 
-    printf("Connecting to server manager at %s:%d\n", args.sm_ip, args.sm_port);
-    sm_socket = server_manager_tcp(&args);
+    printf("Connecting to server manager at %s:%d\n", global_args.sm_ip, global_args.sm_port);
+    sm_socket = server_manager_tcp(&global_args);
     if(sm_socket < 0)
     {
         fprintf(stderr, "Error connecting to server manager\n");

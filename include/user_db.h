@@ -1,7 +1,7 @@
 #ifndef USER_DB_H
 #define USER_DB_H
 #include <inttypes.h>
-#include <string.h>  // for strlen
+#include <string.h>    // for strlen
 
 #ifdef __APPLE__
     #include <ndbm.h>
@@ -30,8 +30,8 @@ typedef struct
 
 typedef struct DBO
 {
-    char *name; // cppcheck-suppress unusedStructMember
-    DBM  *db;   // cppcheck-suppress unusedStructMember
+    char *name;    // cppcheck-suppress unusedStructMember
+    DBM  *db;      // cppcheck-suppress unusedStructMember
 } DBO;
 
 /* Opens the database specified in dbo->name in read/write mode (creating it if needed).

@@ -11,24 +11,25 @@
 // #define SM_RETRY_DELAY 1     // Delay in seconds between attempts
 #define SM_FD 3
 
+Arguments global_args;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
+
 int main(int argc, char *argv[])
 {
-    Arguments args;
-    int       sockfd;
-    int       sm_fd;    // Server manager socket descriptor
+    int sockfd;
+    int sm_fd;    // Server manager socket descriptor
 
-    memset(&args, 0, sizeof(Arguments));
-    args.ip   = NULL;
-    args.port = 0;
+    memset(&global_args, 0, sizeof(Arguments));
+    global_args.ip   = NULL;
+    global_args.port = 0;
 
-    parse_args(argc, argv, &args);
+    parse_args(argc, argv, &global_args);
 
-    printf("Listening on %s:%d\n", args.ip, args.port);
+    printf("Listening on %s:%d\n", global_args.ip, global_args.port);
 
     // Set up signal handler
     setup_signal_handler();
 
-    sockfd = server_tcp(&args);
+    sockfd = server_tcp(&global_args);
     if(sockfd < 0)
     {
         perror("Failed to create server network.");
@@ -37,27 +38,8 @@ int main(int argc, char *argv[])
 
     // === NEW!!! HARD CODED THE SERVER MANAGER FILE DESCRIPTOR BECAUSE THE SERVER STARTER HANDLES IT ===
 
-    // Try to connect to the server manager up to SM_MAX_ATTEMPTS times.
+    // // Try to connect to the server manager up to SM_MAX_ATTEMPTS times.
     sm_fd = SM_FD;
-    //    for(int attempt = 0; attempt < SM_MAX_ATTEMPTS; attempt++)
-    //    {
-    //        printf("Connecting to server manager on %s:%d (attempt %d)...\n", args.sm_ip, args.sm_port, attempt + 1);
-    //        sm_fd = server_manager_tcp(&args);
-    //        if(sm_fd >= 0)
-    //        {
-    //            break;
-    //        }
-    //        fprintf(stderr, "Attempt %d: Failed to connect to server manager, retrying in %d second(s)...\n", attempt + 1, SM_RETRY_DELAY);
-    //        sleep(SM_RETRY_DELAY);
-    //    }
-    //    if(sm_fd < 0)
-    //    {
-    //        fprintf(stderr, "Failed to connect to server manager after %d attempts, continuing without it.\n", SM_MAX_ATTEMPTS);
-    //    }
-    //    else
-    //    {
-    printf("Connected to server manager.\n");
-    //    }
 
     // Start handling client connections (and optionally sending diagnostics to the server manager)
     handle_connections(sockfd, sm_fd);
