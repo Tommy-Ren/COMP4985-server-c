@@ -25,7 +25,7 @@ static ssize_t handle_header(message_t *message, ssize_t nread);
 static ssize_t handle_payload(message_t *message, ssize_t nread);
 static ssize_t handle_response(message_t *message);
 // static ssize_t     send_response(message_t *message);
-static void        send_sm_response(int sm_fd, const char *msg);
+static void        send_sm_response(int sm_fd, char *msg);
 static ssize_t     send_error_response(message_t *message);
 static const char *error_code_to_string(const error_code_t *code);
 static void        count_user(const int *client_id);
@@ -412,29 +412,25 @@ static void count_user(const int *client_id)
 
 static void handle_sm_diagnostic(char *msg)
 {
-    char    *ptr = msg;
-    uint16_t net_user_count;
-    uint32_t net_msg_count;
+    char    *ptr;
     uint16_t msg_payload_len = htons(DIAGNOSTIC_PAYLOAD_LEN);
+
+    ptr = msg;
 
     *ptr++ = SVR_DIAGNOSTIC;
     *ptr++ = VERSION_NUM;
     memcpy(ptr, &msg_payload_len, sizeof(msg_payload_len));
     ptr += sizeof(msg_payload_len);
 
-    *ptr++         = BER_INT;
-    *ptr++         = sizeof(user_count);    // This is the length field in the protocol (size in bytes).
-    net_user_count = htons(user_count);
-    memcpy(ptr, &net_user_count, sizeof(net_user_count));    // Use size of net_user_count (2 bytes).
-    ptr += sizeof(net_user_count);
+    *ptr++ = BER_INT;
+    *ptr++ = sizeof(user_count);
+    ptr += sizeof(user_count);
 
-    *ptr++        = BER_INT;
-    *ptr++        = sizeof(msg_count);    // Length field as per protocol.
-    net_msg_count = htonl(msg_count);
-    memcpy(ptr, &net_msg_count, sizeof(net_msg_count));    // Use size of net_msg_count (typically 4 bytes).
+    *ptr++ = BER_INT;
+    *ptr++ = sizeof(msg_count);
 }
 
-static void send_sm_response(int sm_fd, const char *msg)
+static void send_sm_response(int sm_fd, char *msg)
 {
     char *ptr;
 
