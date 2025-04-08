@@ -436,44 +436,21 @@ static void handle_sm_diagnostic(char *msg)
 
 static void send_sm_response(int sm_fd, const char *msg)
 {
-    // Create a local copy of the message buffer.
-    char       local_msg[MESSAGE_LEN];
-    uint16_t   net_user_count;
-    uint32_t   net_msg_count;
-    char      *ptr;
-    int        fd;
-    const char log[] = "./text.txt";
+    char *ptr;
 
-    memcpy(local_msg, msg, MESSAGE_LEN);
-    ptr = local_msg;
-    // Advance pointer past header.
+    ptr = msg;
     ptr += HEADERLEN;
-    // Convert user_count to network order (2 bytes).
-    net_user_count = htons(user_count);
-    memcpy(ptr, &net_user_count, sizeof(net_user_count));    // Use size of net_user_count (2 bytes).
-    // Advance pointer by 2 bytes plus protocol padding (here +1+1 bytes).
-    ptr += sizeof(net_user_count) + 1 + 1;
+    user_count = htons(user_count);
+    memcpy(ptr, &user_count, sizeof(user_count));
+    ptr += sizeof(user_count) + 1 + 1;
 
-    // Convert message count to network order (4 bytes).
-    net_msg_count = htonl(msg_count);
-    memcpy(ptr, &net_msg_count, sizeof(net_msg_count));    // Use size of net_msg_count (4 bytes).
+    msg_count = htonl(msg_count);
+    memcpy(ptr, &msg_count, sizeof(msg_count));
+    msg_count = ntohl(msg_count);
 
-    printf("send_user_count\n");
+    printf("Sending user count to server manager\n");
 
-    // Write to a log file.
-    fd = open(log, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, S_IRUSR | S_IWUSR);
-    if(fd == -1)
-    {
-        perror("Failed to open the file");
-    }
-    else
-    {
-        write(fd, local_msg, MESSAGE_LEN);
-        close(fd);
-    }
-
-    // Send the constructed message to the server manager.
-    if(write(sm_fd, local_msg, MESSAGE_LEN) < 0)
+    if(write(sm_fd, msg, MESSAGE_LEN) < 0)
     {
         perror("Failed to send user count");
     }
