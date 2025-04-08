@@ -12,6 +12,18 @@
 #define SM_PORT 9000
 #define MSG_LEN 4
 
+/* Packet type definitions per our protocol */
+#define SVR_START 0x14
+#define SVR_STOP 0x15
+#define SVR_ONLINE 0x0C
+#define SVR_OFFLINE 0x0D
+
+/* Use the protocol version defined in our message header */
+#define PROTOCOL_VERSION VERSION_NUM
+
+/* Define the desired file descriptor for the server manager connection */
+#define SM_FD 3
+
 Arguments global_args;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
 
 int main(int argc, char *argv[])
@@ -30,17 +42,40 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Error connecting to server manager\n");
         exit(EXIT_FAILURE);
     }
-    /* Set close-on-exec flag so that sm_socket is not inherited by the execv'd process */
-    if(fcntl(sm_socket, F_SETFD, FD_CLOEXEC) == -1)
+
+    /* Clear FD_CLOEXEC so that the socket is inherited by the child */
     {
-        perror("fcntl FD_CLOEXEC");
+        int flags = fcntl(sm_socket, F_GETFD, 0);
+        if(flags < 0)
+        {
+            perror("fcntl F_GETFD");
+            exit(EXIT_FAILURE);
+        }
+        flags &= ~FD_CLOEXEC;
+        if(fcntl(sm_socket, F_SETFD, flags) == -1)
+        {
+            perror("fcntl F_SETFD");
+        }
     }
+
+    /* Duplicate sm_socket to our desired file descriptor SM_FD so that the server process
+       (after execv) gets the connection on a known fd. */
+    if(dup2(sm_socket, SM_FD) == -1)
+    {
+        perror("dup2");
+        exit(EXIT_FAILURE);
+    }
+    if(sm_socket != SM_FD)
+    {
+        close(sm_socket);
+    }
+
     printf("Connected to server manager.\n");
 
     /* Main loop: continuously wait for start/stop requests from the server manager */
     while(1)
     {
-        ssize_t n = read(sm_socket, req, MSG_LEN);
+        ssize_t n = read(SM_FD, req, MSG_LEN);
         if(n <= 0)
         {
             perror("read");
@@ -52,9 +87,9 @@ int main(int argc, char *argv[])
             continue;
         }
         /* Check that the protocol version matches */
-        if(req[1] != VERSION_NUM)
+        if(req[1] != PROTOCOL_VERSION)
         {
-            fprintf(stderr, "Protocol version mismatch: expected %d, got %d\n", VERSION_NUM, req[1]);
+            fprintf(stderr, "Protocol version mismatch: expected %d, got %d\n", PROTOCOL_VERSION, req[1]);
             continue;
         }
         if(req[0] == SVR_START)
@@ -79,24 +114,20 @@ int main(int argc, char *argv[])
                 else
                 {
                     /* Parent process: send SVR_ONLINE response */
+                    const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                    if(write(SM_FD, online_msg, MSG_LEN) != MSG_LEN)
                     {
-                        const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, VERSION_NUM, 0x00, 0x00};
-                        if(write(sm_socket, online_msg, MSG_LEN) != MSG_LEN)
-                        {
-                            perror("write SVR_ONLINE");
-                        }
+                        perror("write SVR_ONLINE");
                     }
                 }
             }
             else
             {
                 /* Server is already running; send online response */
+                const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                if(write(SM_FD, online_msg, MSG_LEN) != MSG_LEN)
                 {
-                    const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, VERSION_NUM, 0x00, 0x00};
-                    if(write(sm_socket, online_msg, MSG_LEN) != MSG_LEN)
-                    {
-                        perror("write SVR_ONLINE");
-                    }
+                    perror("write SVR_ONLINE");
                 }
             }
         }
@@ -105,29 +136,24 @@ int main(int argc, char *argv[])
             printf("Received SVR_Stop request\n");
             if(child_pid > 0)
             {
+                const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                if(kill(child_pid, SIGINT) != 0)
                 {
-                    const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, VERSION_NUM, 0x00, 0x00};
-                    if(kill(child_pid, SIGINT) != 0)
-                    {
-                        perror("kill");
-                    }
-                    waitpid(child_pid, NULL, 0);
-                    child_pid = -1;
-                    if(write(sm_socket, offline_msg, MSG_LEN) != MSG_LEN)
-                    {
-                        perror("write SVR_OFFLINE");
-                    }
+                    perror("kill");
+                }
+                waitpid(child_pid, NULL, 0);
+                child_pid = -1;
+                if(write(SM_FD, offline_msg, MSG_LEN) != MSG_LEN)
+                {
+                    perror("write SVR_OFFLINE");
                 }
             }
             else
             {
-                /* No server running; reply offline */
+                const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                if(write(SM_FD, offline_msg, MSG_LEN) != MSG_LEN)
                 {
-                    const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, VERSION_NUM, 0x00, 0x00};
-                    if(write(sm_socket, offline_msg, MSG_LEN) != MSG_LEN)
-                    {
-                        perror("write SVR_OFFLINE");
-                    }
+                    perror("write SVR_OFFLINE");
                 }
             }
         }
@@ -136,6 +162,6 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Received unknown request: 0x%02x\n", req[0]);
         }
     }
-    close(sm_socket);
+    close(SM_FD);
     return 0;
 }
