@@ -139,6 +139,7 @@ void handle_connections(int server_fd, int sm_fd)
                 {
                     fds[i].fd     = client_fd;
                     fds[i].events = POLLIN;
+                    client_id[i]  = client_fd;  // Use the accepted socket fd as the temporary client ID
                     client_added  = 1;
                     break;
                 }
