@@ -12,15 +12,6 @@
 #define SM_PORT 9000
 #define MSG_LEN 4
 
-/* Packet type definitions per our protocol */
-#define SVR_START 0x14
-#define SVR_STOP 0x15
-#define SVR_ONLINE 0x0C
-#define SVR_OFFLINE 0x0D
-
-/* Use the protocol version defined in our message header */
-#define PROTOCOL_VERSION VERSION_NUM
-
 Arguments global_args;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
 
 int main(int argc, char *argv[])
@@ -61,9 +52,9 @@ int main(int argc, char *argv[])
             continue;
         }
         /* Check that the protocol version matches */
-        if(req[1] != PROTOCOL_VERSION)
+        if(req[1] != VERSION_NUM)
         {
-            fprintf(stderr, "Protocol version mismatch: expected %d, got %d\n", PROTOCOL_VERSION, req[1]);
+            fprintf(stderr, "Protocol version mismatch: expected %d, got %d\n", VERSION_NUM, req[1]);
             continue;
         }
         if(req[0] == SVR_START)
@@ -89,7 +80,7 @@ int main(int argc, char *argv[])
                 {
                     /* Parent process: send SVR_ONLINE response */
                     {
-                        const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                        const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, VERSION_NUM, 0x00, 0x00};
                         if(write(sm_socket, online_msg, MSG_LEN) != MSG_LEN)
                         {
                             perror("write SVR_ONLINE");
@@ -101,7 +92,7 @@ int main(int argc, char *argv[])
             {
                 /* Server is already running; send online response */
                 {
-                    const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                    const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, VERSION_NUM, 0x00, 0x00};
                     if(write(sm_socket, online_msg, MSG_LEN) != MSG_LEN)
                     {
                         perror("write SVR_ONLINE");
@@ -115,7 +106,7 @@ int main(int argc, char *argv[])
             if(child_pid > 0)
             {
                 {
-                    const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                    const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, VERSION_NUM, 0x00, 0x00};
                     if(kill(child_pid, SIGINT) != 0)
                     {
                         perror("kill");
@@ -132,7 +123,7 @@ int main(int argc, char *argv[])
             {
                 /* No server running; reply offline */
                 {
-                    const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, PROTOCOL_VERSION, 0x00, 0x00};
+                    const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, VERSION_NUM, 0x00, 0x00};
                     if(write(sm_socket, offline_msg, MSG_LEN) != MSG_LEN)
                     {
                         perror("write SVR_OFFLINE");
