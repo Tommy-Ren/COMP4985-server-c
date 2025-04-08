@@ -458,16 +458,31 @@ static void send_sm_response(int sm_fd, char *msg)
     char    *ptr = msg;
     uint16_t net_uc;
     uint32_t net_mc;
+    char     response[SM_RESPONSE_BUFFER_SIZE];    // Buffer to read the server manager's response
+    ssize_t  n;
 
-    /* Skip the header (6 bytes) and the first BER block tag and length (2 bytes)
-       so that we arrive at the user_count value (offset 8 in the packet). */
+    /* Diagnostic message layout is as follows:
+       Bytes 0: Packet type (SVR_DIAGNOSTIC)
+       Byte  1: Protocol version (VERSION_NUM)
+       Bytes 2-3: Sender ID (2 bytes, network order)
+       Bytes 4-5: Payload length (2 bytes, network order, equals DIAGNOSTIC_PAYLOAD_LEN)
+       Byte  6: BER tag for user_count (BER_INT)
+       Byte  7: Length of user_count value (2)
+       Bytes 8-9: user_count (2 bytes, network order)
+       Byte 10: BER tag for msg_count (BER_INT)
+       Byte 11: Length of msg_count value (4)
+       Bytes 12-15: msg_count (4 bytes, network order)
+    */
+
+    /* Skip header (6 bytes) + first BER tag and length (2 bytes) to locate user_count */
     ptr += HEADERLEN + 2;
     net_uc = htons(user_count);
     memcpy(ptr, &net_uc, sizeof(net_uc));
 
-    /* Skip the user_count value (2 bytes) and the next BER tag and length (2 bytes)
-       to update msg_count (offset 12 in the packet). */
-    ptr += (sizeof(uint16_t) + 2);
+    /* Skip user_count value (2 bytes) and the next BER tag and length (2 bytes)
+       to locate msg_count value.
+    */
+    ptr += sizeof(uint16_t) + 2;
     net_mc = htonl(msg_count);
     memcpy(ptr, &net_mc, sizeof(net_mc));
 
@@ -475,6 +490,27 @@ static void send_sm_response(int sm_fd, char *msg)
     if(write(sm_fd, msg, DIAGNOSTIC_MSG_LEN) < 0)
     {
         perror("Failed to send user count");
+        return;
+    }
+
+    /* Now, attempt to read the response from the server manager.
+       The protocol sample defines a MAN_Success response as a 9-byte packet.
+    */
+    n = read(sm_fd, response, sizeof(response));
+    if(n < 0)
+    {
+        perror("Failed to read diagnostic response");
+    }
+    else if(n == 0)
+    {
+        printf("Server manager closed the connection after diagnostic update\n");
+    }
+    else
+    {
+        printf("Received diagnostic response (%zd bytes)\n", n);
+        /* Optionally, parse the response to ensure it is a MAN_Success response.
+           For now we simply print the byte count.
+        */
     }
 }
 
