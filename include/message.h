@@ -20,6 +20,8 @@
 #define MESSAGE_NUM (100)
 #define MESSAGE_LEN (14)
 #define DIAGNOSTIC_PAYLOAD_LEN 0x000A
+// The diagnostic message (sent to the server manager) consists of the 6-byte header plus 10 bytes payload.
+#define DIAGNOSTIC_MSG_LEN (HEADERLEN + DIAGNOSTIC_PAYLOAD_LEN)
 
 #define ACCOUNT_ERROR (-1)
 #define ACCOUNT_LOGIN_ERROR (-2)

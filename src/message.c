@@ -139,7 +139,7 @@ void handle_connections(int server_fd, int sm_fd)
                 {
                     fds[i].fd     = client_fd;
                     fds[i].events = POLLIN;
-                    client_id[i]  = client_fd;  // Use the accepted socket fd as the temporary client ID
+                    client_id[i]  = client_fd;    // Use the accepted socket fd as the temporary client ID
                     client_added  = 1;
                     break;
                 }
@@ -411,39 +411,71 @@ static void count_user(const int *client_id)
     printf("Current number of users: %d\n", user_count);
 }
 
+/* Build diagnostic message to send to the server manager */
 static void handle_sm_diagnostic(char *msg)
 {
-    char    *ptr;
-    uint16_t msg_payload_len = htons(DIAGNOSTIC_PAYLOAD_LEN);
+    char    *ptr         = msg;
+    uint16_t sender_id   = 0;                         // Using SYSID (typically 0)
+    uint16_t payload_len = DIAGNOSTIC_PAYLOAD_LEN;    // 10 bytes payload
 
-    ptr = msg;
+    // Convert numeric fields to network byte order.
+    sender_id   = htons(sender_id);
+    payload_len = htons(payload_len);
 
-    *ptr++ = SVR_DIAGNOSTIC;
-    *ptr++ = VERSION_NUM;
-    memcpy(ptr, &msg_payload_len, sizeof(msg_payload_len));
-    ptr += sizeof(msg_payload_len);
+    // Build the 6-byte header: 1 byte messageType, 1 byte version, 2 bytes sender_id, 2 bytes payload length.
+    *ptr++ = SVR_DIAGNOSTIC;    // Packet type for diagnostics.
+    *ptr++ = VERSION_NUM;       // Protocol version.
+    memcpy(ptr, &sender_id, sizeof(sender_id));
+    ptr += sizeof(sender_id);
+    memcpy(ptr, &payload_len, sizeof(payload_len));
+    ptr += sizeof(payload_len);
 
+    // Append BER-encoded diagnostic payload.
+    // First BER INTEGER: user_count.
     *ptr++ = BER_INT;
-    *ptr++ = sizeof(user_count);
+    *ptr++ = sizeof(user_count);    // Should be 2 bytes.
+    memcpy(ptr, &user_count, sizeof(user_count));
     ptr += sizeof(user_count);
 
+    // Second BER INTEGER: msg_count.
     *ptr++ = BER_INT;
-    *ptr++ = sizeof(msg_count);
+    *ptr++ = sizeof(msg_count);    // Should be 4 bytes.
+    memcpy(ptr, &msg_count, sizeof(msg_count));
+    // Final pointer offset should equal HEADERLEN + DIAGNOSTIC_PAYLOAD_LEN = 6 + 10 = 16 bytes.
 }
 
 static void send_sm_response(int sm_fd, char *msg)
 {
-    char *ptr;
+    char    *ptr = msg;
+    uint16_t net_user_count;
+    uint32_t net_msg_count;
 
-    ptr = msg;
+    /* Diagnostic message layout:
+       Bytes 0: Packet type, 1: Version,
+       Bytes 2-3: sender_id, Bytes 4-5: payload length,
+       Bytes 6: BER tag for user_count, 7: length (2),
+       Bytes 8-9: user_count value,
+       Bytes 10: BER tag for msg_count, 11: length (4),
+       Bytes 12-15: msg_count value.
+    */
+
+    /* Skip the header (6 bytes) */
     ptr += HEADERLEN;
-    user_count = htons(user_count);
-    memcpy(ptr, &user_count, sizeof(user_count));
-    ptr += sizeof(user_count) + 1 + 1;
 
-    msg_count = htonl(msg_count);
-    memcpy(ptr, &msg_count, sizeof(msg_count));
-    msg_count = ntohl(msg_count);
+    /* Update the user_count value.
+       The user_count value is located at offset 2 of the first BER block (after the BER tag and length).
+    */
+    net_user_count = htons(user_count);
+    memcpy(ptr + 2, &net_user_count, sizeof(net_user_count));
+
+    /* Move pointer to the start of the second BER block.
+       The first BER block is: tag (1 byte) + length (1 byte) + value (2 bytes) = 4 bytes.
+    */
+    ptr += 4;
+
+    /* Update the msg_count value in the second BER block. */
+    net_msg_count = htonl(msg_count);
+    memcpy(ptr + 2, &net_msg_count, sizeof(net_msg_count));
 
     printf("Sending user count to server manager\n");
 

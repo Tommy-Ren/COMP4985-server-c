@@ -70,8 +70,6 @@ int server_tcp(const Arguments *args)
         return ERR_BIND;
     }
     printf("Bound to socket: %s:%u\n", args->ip, args->port);
-    set_ip(args->ip);   // Update the shared server IP for the manager
-
     /* Start listening */
     if(socket_listen(sockfd, SOMAXCONN) < 0)
     {
