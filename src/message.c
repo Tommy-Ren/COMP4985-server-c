@@ -416,42 +416,35 @@ static void handle_sm_diagnostic(char *msg)
     char    *ptr = msg;
     uint16_t temp;
 
-    /* Build the 6-byte header */
-    *ptr++ = SVR_DIAGNOSTIC; /* Packet type from sm_type_t enum (0x0A) */
-    *ptr++ = VERSION_NUM;    /* Protocol version (3) */
-
-    /* Write the 2-byte sender_id (using SYSID, typically 0) */
-    temp = htons((uint16_t)SYSID);
+    /* Build the 4-byte header for server management */
+    *ptr++ = SVR_DIAGNOSTIC;                /* Packet type, from your sm_type_t enum (0x0A) */
+    *ptr++ = VERSION_NUM;                   /* Protocol version */
+    temp   = htons(DIAGNOSTIC_PAYLOAD_LEN); /* 10 bytes payload */
     memcpy(ptr, &temp, sizeof(temp));
     ptr += sizeof(temp);
 
-    /* Write the 2-byte payload length (DIAGNOSTIC_PAYLOAD_LEN, 10 bytes) */
-    temp = htons(DIAGNOSTIC_PAYLOAD_LEN);
-    memcpy(ptr, &temp, sizeof(temp));
-    ptr += sizeof(temp);
-
-    /* Now append the BER-encoded diagnostic payload */
-
-    /* First BER block: user_count (as a 2-byte integer) */
-    *ptr++ = BER_INT;          /* BER tag for integer */
+    /* Append the diagnostic payload */
+    /* First BER block: user_count */
+    *ptr++ = BER_INT;          /* BER tag (should be 0x02) */
     *ptr++ = sizeof(uint16_t); /* Length: 2 bytes */
     temp   = htons(user_count);
     memcpy(ptr, &temp, sizeof(temp));
     ptr += sizeof(uint16_t);
 
-    /* Second BER block: msg_count (as a 4-byte integer) */
-    *ptr++ = BER_INT;          /* BER tag for integer */
+    /* Second BER block: msg_count */
+    *ptr++ = BER_INT;          /* BER tag */
     *ptr++ = sizeof(uint32_t); /* Length: 4 bytes */
     {
         uint32_t temp32 = htonl(msg_count);
         memcpy(ptr, &temp32, sizeof(temp32));
     }
-    /* At this point, ptr should have advanced DIAGNOSTIC_MSG_LEN bytes (16 bytes) from msg */
+    /* Total bytes written = SM_HEADERLEN (4) + DIAGNOSTIC_PAYLOAD_LEN (10) = 14 bytes */
 }
 
-/* Before sending the diagnostic message, update the payload fields as needed
-   then write out DIAGNOSTIC_MSG_LEN bytes. In this function we update the payload
-   values (user_count and msg_count) in case they have changed.
+/* Send the diagnostic message to the server manager.
+   Since the server manager protocol uses a 4-byte header,
+   we update the payload fields using SM_HEADERLEN as the starting offset.
+   We no longer attempt to read any response.
 */
 static void send_sm_response(int sm_fd, char *msg)
 {
@@ -459,16 +452,16 @@ static void send_sm_response(int sm_fd, char *msg)
     uint16_t net_uc;
     uint32_t net_mc;
 
-    /* Update diagnostic payload:
-       Skip header (6 bytes) and the first BER tag and length (2 bytes)
-       so we reach the user_count value (2 bytes) at offset 8.
+    /* Update the diagnostic payload values */
+    /* Skip SM_HEADERLEN (4 bytes) and the first BER tag and length (2 bytes)
+       so that we are at offset 6 (4+2) where the user_count value (2 bytes) should be.
     */
-    ptr += HEADERLEN + 2;
+    ptr += SM_HEADERLEN + 2;
     net_uc = htons(user_count);
     memcpy(ptr, &net_uc, sizeof(net_uc));
 
-    /* Now skip the 2-byte user_count value and the next BER tag and length (2 bytes)
-       so that we reach the msg_count value at offset 12.
+    /* Skip the user_count value (2 bytes) and the next BER tag and length (2 bytes)
+       to locate the msg_count value (offset 10 in the packet).
     */
     ptr += sizeof(uint16_t) + 2;
     net_mc = htonl(msg_count);
@@ -479,7 +472,9 @@ static void send_sm_response(int sm_fd, char *msg)
     {
         perror("Failed to send user count");
     }
-    /* Note: We do not wait to read a response now because the server manager does not send one. */
+    /* We do not attempt to read any response because the manager protocol
+       currently does not send an acknowledgment for diagnostic updates.
+    */
 }
 
 static ssize_t send_error_response(message_t *message)

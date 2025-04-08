@@ -15,13 +15,14 @@
 #define TIMEOUT (5000)
 
 #define HEADERLEN (6)
+#define SM_HEADERLEN 4
 #define U8ENCODELEN (3)
 #define RESPONSELEN (256)
 #define MESSAGE_NUM (100)
 #define MESSAGE_LEN (14)
 #define DIAGNOSTIC_PAYLOAD_LEN 0x000A
 // The diagnostic message (sent to the server manager) consists of the 6-byte header plus 10 bytes payload.
-#define DIAGNOSTIC_MSG_LEN (HEADERLEN + DIAGNOSTIC_PAYLOAD_LEN)
+#define DIAGNOSTIC_MSG_LEN (SM_HEADERLEN + DIAGNOSTIC_PAYLOAD_LEN)
 #define SM_RESPONSE_BUFFER_SIZE 32
 
 #define ACCOUNT_ERROR (-1)
