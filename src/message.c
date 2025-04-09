@@ -256,6 +256,11 @@ static ssize_t handle_package(message_t *message)
     nread = read(message->client->fd, (char *)message->req_buf, message->payload_len);
     if(nread < 0)
     {
+        if(errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            // No data yet; not a real error for non-blocking sockets
+            return 0;    // Return NO_DATA or just 0 to skip this round
+        }
         perror("Fail to read header");
         message->code = EC_SERVER;
         return -1;
