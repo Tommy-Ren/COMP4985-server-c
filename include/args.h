@@ -3,7 +3,7 @@
 
 #include <arpa/inet.h>
 
-#define IP_ADDRESS "127.0.0.1"
+#define IP_ADDRESS "0.0.0.0"
 #define SERVER_MANAGER_IP "192.168.1.86"
 #define PORT "8080"
 #define SERVER_MANAGER_PORT "9000"

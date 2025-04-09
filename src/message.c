@@ -184,6 +184,7 @@ void handle_connections(int server_fd)
                     retval = 0;    // reset retval for each connection
                     while(retval != END)
                     {
+                        printf("handling message");
                         retval = handle_message(&message);
                     }
                     /* Do not exit the poll loop—continue to process other connections */
@@ -259,6 +260,7 @@ static ssize_t handle_package(message_t *message)
         return -1;
     }
 
+    printf("handling header\n");
     if(handle_header(message, nread) < 0)
     {
         perror("Failed to decode header");
@@ -285,6 +287,7 @@ static ssize_t handle_package(message_t *message)
         return -4;
     }
 
+    printf("handling payload\n");
     retval = handle_payload(message, nread);
     if(retval == ACCOUNT_ERROR)
     {
