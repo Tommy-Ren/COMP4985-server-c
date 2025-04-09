@@ -52,7 +52,6 @@ void handle_connections(int server_fd, int sm_fd)
     message_t     message;
     char          sm_msg[MESSAGE_NUM];
     int           i;
-    ssize_t       retval;
 
     // Initialize fds
     fds[0].fd     = server_fd;
@@ -110,15 +109,13 @@ void handle_connections(int server_fd, int sm_fd)
             }
             continue;
         }
-        // Check for new client connections
+        /* Inside handle_connections, after accepting a new client: */
         if(fds[0].revents & POLLIN)
         {
-            int                     client_added;
+            int                     client_added = 0;
             int                     client_fd;
             struct sockaddr_storage client_addr;
             socklen_t               client_addr_len = sizeof(client_addr);
-
-            client_added = 0;
 
             client_fd = socket_accept(server_fd, &client_addr, &client_addr_len);
             if(client_fd < 0)
@@ -129,58 +126,75 @@ void handle_connections(int server_fd, int sm_fd)
                     goto exit;
                 }
                 perror("accept error");
-                continue;
             }
-
-            for(i = 1; i < MAX_FDS; i++)
+            else
             {
-                if(fds[i].fd == -1)
+                printf("Accepted new connection, client fd = %d\n", client_fd);
+                /* Send an immediate handshake reply to prompt the client.
+                   This handshake is a simple 6-byte message with SYS_SUCCESS,
+                   the protocol version, and zeroed sender and payload length.
+                */
                 {
-                    fds[i].fd     = client_fd;
-                    fds[i].events = POLLIN;
-                    client_id[i]  = client_fd;    // Use the accepted socket fd as the temporary client ID
-                    client_added  = 1;
-                    break;
+                    const unsigned char handshake[HEADERLEN] = {SYS_SUCCESS, VERSION_NUM, 0x00, 0x00, 0x00, 0x00};
+                    if(write(client_fd, handshake, HEADERLEN) < 0)
+                    {
+                        perror("Failed to send handshake to client");
+                    }
+                    else
+                    {
+                        printf("Sent handshake to client fd %d\n", client_fd);
+                    }
                 }
-            }
-
-            if(!client_added)
-            {
-                printf("Too many clients connected. Rejecting connection.\n");
-                close(client_fd);
-                continue;
+                for(i = 1; i < MAX_FDS; i++)
+                {
+                    if(fds[i].fd == -1)
+                    {
+                        fds[i].fd     = client_fd;
+                        fds[i].events = POLLIN;
+                        client_id[i]  = client_fd;    // use fd as temporary client ID
+                        client_added  = 1;
+                        break;
+                    }
+                }
+                if(!client_added)
+                {
+                    printf("Too many clients connected. Rejecting connection (client fd = %d).\n", client_fd);
+                    close(client_fd);
+                }
             }
         }
 
-        // Handle incoming data on existing client connections.
+        // Check for incoming data on client connections.
         for(i = 1; i < MAX_FDS; i++)
         {
             if(fds[i].fd != -1)
             {
                 if(fds[i].revents & POLLIN)
                 {
+                    ssize_t ret;
+                    printf("Data available on client fd %d. Processing message...\n", fds[i].fd);
                     message.fds          = fds;
                     message.client       = &fds[i];
                     message.client_id    = &client_id[i];
-                    message.payload_len  = HEADERLEN;
-                    message.response_len = 3;
+                    message.payload_len  = HEADERLEN;    // set initial header length
+                    message.response_len = 0;            // reset response length for each message
                     message.code         = EC_GOOD;
 
-                    retval = 0;    // reset retval for each connection
-                    while(retval != END)
+                    ret = handle_message(&message);
+                    if(ret == END)
                     {
-                        retval = handle_message(&message);
+                        printf("Client fd %d closed connection.\n", fds[i].fd);
+                        close(fds[i].fd);
+                        fds[i].fd    = -1;
+                        client_id[i] = -1;
                     }
-                    /* Do not exit the poll loop—continue to process other connections */
                 }
                 if(fds[i].revents & (POLLHUP | POLLERR))
                 {
-                    printf("client#%d disconnected.\n", client_id[i]);
+                    printf("Client fd %d disconnected (POLLHUP/POLLERR).\n", client_id[i]);
                     close(fds[i].fd);
-                    fds[i].fd     = -1;
-                    fds[i].events = 0;
-                    client_id[i]  = -1;
-                    continue;
+                    fds[i].fd    = -1;
+                    client_id[i] = -1;
                 }
             }
         }
@@ -207,7 +221,7 @@ static ssize_t handle_message(message_t *message)
     message->req_buf = malloc(HEADERLEN);
     if(!message->req_buf)
     {
-        perror("Failed to allocate message message buffer");
+        perror("Failed to allocate message buffer");
         retval = -1;
         goto exit;
     }
@@ -238,6 +252,11 @@ static ssize_t handle_package(message_t *message)
     void   *tmp;
 
     nread = read(message->client->fd, (char *)message->req_buf, message->payload_len);
+    if(nread == 0)
+    {
+        // Client closed connection – return END so that the outer loop in handle_connections can clean up.
+        return END;
+    }
     if(nread < 0)
     {
         perror("Fail to read header");
@@ -255,7 +274,7 @@ static ssize_t handle_package(message_t *message)
     tmp = realloc(message->req_buf, (size_t)(message->payload_len + HEADERLEN));
     if(!tmp)
     {
-        perror("Failed to reallocate message body\n");
+        perror("Failed to reallocate message body");
         free(message->req_buf);
         message->code = EC_SERVER;
         return -3;
@@ -266,7 +285,7 @@ static ssize_t handle_package(message_t *message)
     nread = read(message->client->fd, ((char *)message->req_buf) + HEADERLEN, message->payload_len);
     if(nread < 0)
     {
-        perror("Failed to read message body\n");
+        perror("Failed to read message body");
         message->code = EC_SERVER;
         return -4;
     }
@@ -274,32 +293,32 @@ static ssize_t handle_package(message_t *message)
     retval = handle_payload(message, nread);
     if(retval == ACCOUNT_ERROR)
     {
-        perror("Failed to identify account package\n");
+        perror("Failed to identify account package");
         return ACCOUNT_ERROR;
     }
     if(retval == ACCOUNT_LOGIN_ERROR)
     {
-        perror("Failed to login\n");
+        perror("Failed to login");
         return ACCOUNT_LOGIN_ERROR;
     }
     if(retval == ACCOUNT_CREATE_ERROR)
     {
-        perror("Failed to create account\n");
+        perror("Failed to create account");
         return ACCOUNT_CREATE_ERROR;
     }
     if(retval == ACCOUNT_EDIT_ERROR)
     {
-        perror("Failed to edit account\n");
+        perror("Failed to edit account");
         return ACCOUNT_EDIT_ERROR;
     }
     if(retval == CHAT_ERROR)
     {
-        perror("Chat error\n");
+        perror("Chat error");
         return CHAT_ERROR;
     }
     if(retval == END)
     {
-        perror("End, closing client fd.\n");
+        perror("End, closing client fd");
         return END;
     }
 
@@ -308,12 +327,10 @@ static ssize_t handle_package(message_t *message)
 
 static ssize_t handle_header(message_t *message, ssize_t nread)
 {
-    char *buf;
-
-    buf = (char *)message->req_buf;
+    char *buf = (char *)message->req_buf;
     if(nread < (ssize_t)sizeof(message->payload_len))
     {
-        perror("Payload length mismatch\n");
+        fprintf(stderr, "Error: Received less than expected header bytes. nread=%zd\n", nread);
         message->code = EC_INV_REQ;
         return -1;
     }
@@ -331,12 +348,7 @@ static ssize_t handle_header(message_t *message, ssize_t nread)
     memcpy(&message->payload_len, buf, sizeof(message->payload_len));
     message->payload_len = ntohs(message->payload_len);
 
-    // DEBUG
-    printf("Header type: %d\n", (int)message->type);
-    printf("Header version: %d\n", (int)message->version);
-    printf("Header sender_id: %d\n", (int)message->sender_id);
-    printf("Header payload_len: %d\n", (int)message->payload_len);
-
+    printf("Header received: type=%d, version=%d, sender_id=%d, payload_len=%d\n", message->type, message->version, message->sender_id, message->payload_len);
     return 0;
 }
 

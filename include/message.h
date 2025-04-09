@@ -30,7 +30,7 @@
 #define ACCOUNT_CREATE_ERROR (-3)
 #define ACCOUNT_EDIT_ERROR (-4)
 #define CHAT_ERROR (-5)
-#define END (-6)
+#define END ((ssize_t) - 6)
 
 #define UNKNOWNTYPE "Unknown Type"
 

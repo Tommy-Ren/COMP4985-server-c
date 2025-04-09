@@ -38,22 +38,21 @@ ssize_t account_handler(message_t *message)
 
 static ssize_t account_create(message_t *message)
 {
-    char db_name[]    = "user_db";
-    char index_name[] = "index_db";
-    DBO  userDB;
-    DBO  index_userDB;
-
+    /* Move all declarations to the top of the function */
+    char        db_name[]    = "user_db";
+    char        index_name[] = "index_db";
+    DBO         userDB;
+    DBO         index_userDB;
     const char *username;
     const char *password;
     uint8_t     user_len;
     uint8_t     pass_len;
+    int         user_id;
+    char       *key = NULL;
+    char       *ptr;
+    uint16_t    sender_id = SYSID;
 
-    int   user_id;
-    char *key = NULL;
-    char *ptr;
-
-    uint16_t sender_id = SYSID;
-
+    /* Initialize database objects with the declared names */
     userDB.name       = db_name;
     userDB.db         = NULL;
     index_userDB.name = index_name;
@@ -73,25 +72,26 @@ static ssize_t account_create(message_t *message)
         goto error;
     }
 
-    // Extract username from request buffer.
+    /* Extract username from request buffer.
+       Assumed payload layout:
+       [BER tag][username length][username][BER tag][password length][password]
+    */
     ptr = (char *)message->req_buf + HEADERLEN + 1;
     memcpy(&user_len, ptr, sizeof(user_len));
     ptr += sizeof(user_len);
     username = ptr;
 
-    // Extract password.
     ptr += user_len + 1;
     memcpy(&pass_len, ptr, sizeof(pass_len));
     ptr += sizeof(pass_len);
     password = ptr;
 
-    // Print extracted values using %.*s.
     printf("Username: %.*s\n", (int)user_len, username);
     printf("Username length: %d\n", (int)user_len);
     printf("Password: %.*s\n", (int)pass_len, password);
     printf("Password length: %d\n", (int)pass_len);
 
-    // Check if user exists.
+    /* Check if user exists. */
     if(retrieve_byte(userDB.db, username, user_len))
     {
         message->code = EC_USER_EXISTS;
@@ -101,7 +101,7 @@ static ssize_t account_create(message_t *message)
     user_index++;
     *message->client_id = user_index;
 
-    // Store user.
+    /* Store user credentials. */
     if(store_byte(userDB.db, username, user_len, password, pass_len) != 0)
     {
         perror("Failed to store username and password");
@@ -116,7 +116,7 @@ static ssize_t account_create(message_t *message)
         goto error;
     }
 
-    // Store user index.
+    /* Store user index. */
     if(store_int(index_userDB.db, key, *message->client_id) < 0)
     {
         perror("Failed to store user index");
@@ -124,7 +124,7 @@ static ssize_t account_create(message_t *message)
         goto error;
     }
 
-    // Retrieve user id.
+    /* Retrieve user id for logging */
     if(retrieve_int(index_userDB.db, key, &user_id) < 0)
     {
         printf("Failed to retrieve user info\n");
@@ -134,10 +134,10 @@ static ssize_t account_create(message_t *message)
     printf("User %.*d created\n", (int)sizeof(*message->client_id), user_id);
 
     ptr = (char *)message->res_buf;
-    // Build response.
+    /* Build response */
     *ptr++    = SYS_SUCCESS;
     *ptr++    = VERSION_NUM;
-    sender_id = htons(sender_id);    // Removed redundant cast
+    sender_id = htons(sender_id);
     memcpy(ptr, &sender_id, sizeof(sender_id));
     ptr += sizeof(sender_id);
     message->response_len = htons(message->response_len);
@@ -161,24 +161,24 @@ error:
 
 static ssize_t account_login(message_t *message)
 {
-    char db_name[]    = "user_db";
-    char index_name[] = "index_db";
-    DBO  userDB;
-    DBO  index_userDB;
-
+    /* Move all declarations to the top */
+    char        db_name[]    = "user_db";
+    char        index_name[] = "index_db";
+    DBO         userDB;
+    DBO         index_userDB;
     const char *username;
     const char *password;
     uint8_t     user_len;
     uint8_t     pass_len;
+    int         user_id;
+    datum       output;
+    char       *existing = NULL;
+    char       *key      = NULL;
+    char       *ptr;
+    uint16_t    sender_id = SYSID;
+    uint16_t    uid; /* Declaration moved here instead of within a block */
 
-    int   user_id;
-    datum output;
-    char *existing = NULL;
-    char *key      = NULL;
-    char *ptr;
-
-    uint16_t sender_id = SYSID;
-
+    /* Initialize database objects with the declared names */
     userDB.name       = db_name;
     userDB.db         = NULL;
     index_userDB.name = index_name;
@@ -200,7 +200,10 @@ static ssize_t account_login(message_t *message)
         goto error;
     }
 
-    // Extract username and password.
+    /* Extract username and password from payload.
+       Assumed payload layout:
+       [BER tag][username length][username][BER tag][password length][password]
+    */
     ptr = (char *)message->req_buf + HEADERLEN + 1;
     memcpy(&user_len, ptr, sizeof(user_len));
     ptr += sizeof(user_len);
@@ -216,7 +219,7 @@ static ssize_t account_login(message_t *message)
     printf("Password: %.*s\n", (int)pass_len, password);
     printf("Password length: %d\n", (int)pass_len);
 
-    // Retrieve existing user.
+    /* Retrieve existing user record */
     existing = retrieve_byte(userDB.db, username, user_len);
     if(!existing)
     {
@@ -225,7 +228,7 @@ static ssize_t account_login(message_t *message)
         goto error;
     }
 
-    // Validate password.
+    /* Validate password */
     if(memcmp(existing, password, pass_len) != 0)
     {
         sfree((void **)&existing);
@@ -253,7 +256,7 @@ static ssize_t account_login(message_t *message)
     ptr       = (char *)message->res_buf;
     *ptr++    = ACC_LOGIN_SUCCESS;
     *ptr++    = SYSID;
-    sender_id = htons(sender_id);    // Removed redundant cast
+    sender_id = htons(sender_id);
     memcpy(ptr, &sender_id, sizeof(sender_id));
     ptr += sizeof(sender_id);
     message->response_len = 4;
@@ -262,13 +265,10 @@ static ssize_t account_login(message_t *message)
     ptr += sizeof(message->response_len);
     *ptr++ = BER_INT;
     *ptr++ = sizeof(uint16_t);
-    {
-        uint16_t uid = (uint16_t)user_id;
-        uid          = htons(uid);
-        memcpy(ptr, &uid, sizeof(uid));
-        // Convert back and assign to client_id.
-        *message->client_id = (int)ntohs(uid);
-    }
+    uid    = (uint16_t)user_id;
+    uid    = htons(uid);
+    memcpy(ptr, &uid, sizeof(uid));
+    *message->client_id = (int)ntohs(uid);
 
     dbm_close(userDB.db);
     dbm_close(index_userDB.db);
@@ -286,17 +286,17 @@ error:
 
 static ssize_t account_edit(message_t *message)
 {
-    char db_name[] = "user_db";
-    DBO  userDB;
-
+    /* Move all declarations to the top */
+    char        db_name[] = "user_db";
+    DBO         userDB;
     const char *username;
     const char *new_password;
     uint8_t     user_len;
     uint8_t     pass_len;
+    char       *existing = NULL;
+    char       *ptr;
 
-    char *existing = NULL;
-    char *ptr;
-
+    /* Initialize database object */
     userDB.name = db_name;
     userDB.db   = NULL;
 
@@ -344,7 +344,7 @@ static ssize_t account_edit(message_t *message)
     *ptr++ = VERSION_NUM;
     {
         uint16_t sender_id = SYSID;
-        sender_id          = htons(sender_id);    // Removed redundant cast
+        sender_id          = htons(sender_id);
         memcpy(ptr, &sender_id, sizeof(sender_id));
         ptr += sizeof(sender_id);
     }
