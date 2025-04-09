@@ -21,18 +21,13 @@
 /* Use the protocol version defined in our message header */
 #define PROTOCOL_VERSION VERSION_NUM
 
-/* Define the desired file descriptor for the server manager connection */
-#define SM_FD 3
-
-Arguments global_args;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
-
 int main(int argc, char *argv[])
 {
     int           sm_socket;
     int           child_pid = -1;
     unsigned char req[MSG_LEN];
 
-    parse_args(argc, argv, &global_args);
+    parse_args(argc, argv);
     global_args.sm_port = SM_PORT;    // hard coded server manager port
 
     printf("Connecting to server manager at %s:%d\n", global_args.sm_ip, global_args.sm_port);
@@ -58,14 +53,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* Duplicate sm_socket to our desired file descriptor SM_FD so that the server process
+    /* Duplicate sm_socket to our desired file descriptor sm_fd so that the server process
        (after execv) gets the connection on a known fd. */
-    if(dup2(sm_socket, SM_FD) == -1)
+    if(dup2(sm_socket, sm_fd) == -1)
     {
         perror("dup2");
         exit(EXIT_FAILURE);
     }
-    if(sm_socket != SM_FD)
+    if(sm_socket != sm_fd)
     {
         close(sm_socket);
     }
@@ -75,7 +70,7 @@ int main(int argc, char *argv[])
     /* Main loop: continuously wait for start/stop requests from the server manager */
     while(1)
     {
-        ssize_t n = read(SM_FD, req, MSG_LEN);
+        ssize_t n = read(sm_fd, req, MSG_LEN);
         if(n <= 0)
         {
             perror("read");
@@ -115,7 +110,7 @@ int main(int argc, char *argv[])
                 {
                     /* Parent process: send SVR_ONLINE response */
                     const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, PROTOCOL_VERSION, 0x00, 0x00};
-                    if(write(SM_FD, online_msg, MSG_LEN) != MSG_LEN)
+                    if(write(sm_fd, online_msg, MSG_LEN) != MSG_LEN)
                     {
                         perror("write SVR_ONLINE");
                     }
@@ -125,7 +120,7 @@ int main(int argc, char *argv[])
             {
                 /* Server is already running; send online response */
                 const unsigned char online_msg[MSG_LEN] = {SVR_ONLINE, PROTOCOL_VERSION, 0x00, 0x00};
-                if(write(SM_FD, online_msg, MSG_LEN) != MSG_LEN)
+                if(write(sm_fd, online_msg, MSG_LEN) != MSG_LEN)
                 {
                     perror("write SVR_ONLINE");
                 }
@@ -142,8 +137,7 @@ int main(int argc, char *argv[])
                     perror("kill");
                 }
                 waitpid(child_pid, NULL, 0);
-                child_pid = -1;
-                if(write(SM_FD, offline_msg, MSG_LEN) != MSG_LEN)
+                if(write(sm_fd, offline_msg, MSG_LEN) != MSG_LEN)
                 {
                     perror("write SVR_OFFLINE");
                 }
@@ -151,17 +145,20 @@ int main(int argc, char *argv[])
             else
             {
                 const unsigned char offline_msg[MSG_LEN] = {SVR_OFFLINE, PROTOCOL_VERSION, 0x00, 0x00};
-                if(write(SM_FD, offline_msg, MSG_LEN) != MSG_LEN)
+                if(write(sm_fd, offline_msg, MSG_LEN) != MSG_LEN)
                 {
                     perror("write SVR_OFFLINE");
                 }
             }
+            printf("Shutting down server starter...\n");
+            close(sm_fd);
+            exit(EXIT_SUCCESS);
         }
         else
         {
             fprintf(stderr, "Received unknown request: 0x%02x\n", req[0]);
         }
     }
-    close(SM_FD);
+    close(sm_fd);
     return 0;
 }

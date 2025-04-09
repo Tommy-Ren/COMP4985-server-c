@@ -160,6 +160,6 @@ typedef enum
     SVR_STOP  = 0x15,
 } sm_type_t;
 
-void handle_connections(int server_fd, int sm_fd);
+void handle_connections(int server_fd);
 
 #endif

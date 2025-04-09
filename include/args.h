@@ -4,8 +4,8 @@
 #include <arpa/inet.h>
 
 #define IP_ADDRESS "127.0.0.1"
-#define SERVER_MANAGER_IP "192.168.0.130"
-#define PORT "8000"
+#define SERVER_MANAGER_IP "192.168.1.86"
+#define PORT "8080"
 #define SERVER_MANAGER_PORT "9000"
 
 // struct to hold the arguments
@@ -23,6 +23,6 @@ extern Arguments global_args;    // NOLINT(cppcoreguidelines-avoid-non-const-glo
 _Noreturn void usage(const char *app_name, int exit_code, const char *message);
 
 // checks arguments
-void parse_args(int argc, char *argv[], Arguments *args);
+void parse_args(int argc, char *argv[]);
 
 #endif

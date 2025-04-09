@@ -25,7 +25,7 @@ static ssize_t handle_header(message_t *message, ssize_t nread);
 static ssize_t handle_payload(message_t *message, ssize_t nread);
 static ssize_t handle_response(message_t *message);
 // static ssize_t     send_response(message_t *message);
-static void        send_sm_response(int sm_fd, char *msg);
+static void        send_sm_response(char *msg);
 static ssize_t     send_error_response(message_t *message);
 static const char *error_code_to_string(const error_code_t *code);
 static void        count_user(const int *client_id);
@@ -41,7 +41,7 @@ static const error_code_map code_map[] = {
     {EC_REQ_TIMEOUT,   "message Timeout"       }
 };
 
-void handle_connections(int server_fd, int sm_fd)
+void handle_connections(int server_fd)
 {
     /* Use the global server_running variable declared in utils.h */
     struct pollfd fds[MAX_FDS];
@@ -106,7 +106,7 @@ void handle_connections(int server_fd, int sm_fd)
             count_user(client_id);
             if(sm_fd >= 0)    // Only send diagnostic update if connected to the server manager.
             {
-                send_sm_response(sm_fd, sm_msg);
+                send_sm_response(sm_msg);
             }
             continue;
         }
@@ -446,7 +446,7 @@ static void handle_sm_diagnostic(char *msg)
    we update the payload fields using SM_HEADERLEN as the starting offset.
    We no longer attempt to read any response.
 */
-static void send_sm_response(int sm_fd, char *msg)
+static void send_sm_response(char *msg)
 {
     char    *ptr = msg;
     uint16_t net_uc;

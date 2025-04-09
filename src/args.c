@@ -6,6 +6,8 @@
 
 #define OPTION_MESSAGE_LEN 50
 
+Arguments global_args;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
+
 /* Initialize the socket and bind it to the specified port */
 _Noreturn void usage(const char *app_name, int exit_code, const char *message)
 {
@@ -29,9 +31,9 @@ _Noreturn void usage(const char *app_name, int exit_code, const char *message)
  *
  * argc: Number of command line arguments.
  * argv: Array of command line arguments.
- * args: Pointer to the Arguments structure to populate.
+ * global_args: Pointer to the Arguments structure to populate.
  */
-void parse_args(int argc, char *argv[], Arguments *args)
+void parse_args(int argc, char *argv[])
 {
     int opt;
 
@@ -49,16 +51,16 @@ void parse_args(int argc, char *argv[], Arguments *args)
         switch(opt)
         {
             case 'a':
-                args->ip = optarg;
+                global_args.ip = optarg;
                 break;
             case 'p':
-                args->port = convert_port(argv[0], optarg);
+                global_args.port = convert_port(argv[0], optarg);
                 break;
             case 'A':
-                args->sm_ip = optarg;
+                global_args.sm_ip = optarg;
                 break;
             case 'P':
-                args->sm_port = convert_port(argv[0], optarg);
+                global_args.sm_port = convert_port(argv[0], optarg);
                 break;
             case 'h':
                 usage(argv[0], EXIT_SUCCESS, NULL);
@@ -76,20 +78,20 @@ void parse_args(int argc, char *argv[], Arguments *args)
     }
 
     // Apply defaults if no arguments were given
-    if(args->ip == NULL)
+    if(global_args.ip == NULL)
     {
-        args->ip = IP_ADDRESS;    // Default to 127.0.0.1
+        global_args.ip = IP_ADDRESS;    // Default to 127.0.0.1
     }
-    if(args->port == 0)
+    if(global_args.port == 0)
     {
-        args->port = convert_port(argv[0], PORT);
+        global_args.port = convert_port(argv[0], PORT);
     }
-    if(args->sm_ip == NULL)
+    if(global_args.sm_ip == NULL)
     {
-        args->sm_ip = SERVER_MANAGER_IP;    // Default to 192.168.122.1 (DEMO only)
+        global_args.sm_ip = SERVER_MANAGER_IP;    // Default to 192.168.122.1 (DEMO only)
     }
-    if(args->sm_port == 0)
+    if(global_args.sm_port == 0)
     {
-        args->sm_port = convert_port(argv[0], SERVER_MANAGER_PORT);
+        global_args.sm_port = convert_port(argv[0], SERVER_MANAGER_PORT);
     }
 }

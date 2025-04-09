@@ -31,6 +31,8 @@ static int socket_connect(int sockfd, const struct sockaddr_storage *addr, sockl
 #define ERR_LISTEN (-4)
 #define ERR_CONNECT (-5)
 
+int sm_fd;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
+
 /*
  * Function: server_tcp
  * Description: Sets up a TCP server using the provided arguments.
@@ -89,7 +91,6 @@ int server_tcp(const Arguments *args)
  */
 int server_manager_tcp(const Arguments *args)
 {
-    int                     sm_fd;
     struct sockaddr_storage addr;
     socklen_t               addr_len;
 

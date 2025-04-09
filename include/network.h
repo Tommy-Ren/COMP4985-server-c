@@ -5,6 +5,8 @@
 #include "../include/message.h"
 #include "../include/user_db.h"
 
+extern int sm_fd;    // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,-warnings-as-errors)
+
 int server_tcp(const Arguments *args);
 int server_manager_tcp(const Arguments *args);
 
