@@ -1,5 +1,5 @@
 server:
-./build/server_starter -A 192.168.1.86 -P 9000 -a 192.168.122.1 -p 8080
+./build/server_starter -A 192.168.0.130 -P 9000 -a 192.168.0.39 -p 8080
 
 client:
 ./build/main -h 192.168.0.130 -p 8080
