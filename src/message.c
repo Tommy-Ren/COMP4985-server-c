@@ -365,6 +365,7 @@ static ssize_t handle_payload(message_t *message, ssize_t nread)
         return ACCOUNT_ERROR;
     }
 
+    printf("handle payload\n");
     switch(message->type)
     {
         case ACC_LOGIN:
@@ -503,7 +504,9 @@ static ssize_t send_error_response(message_t *message)
     if(message->type != ACC_LOGOUT)
     {
         const char *msg;
+
         // Build error response header.
+        printf("sending error response\n");
         *ptr++    = SYS_ERROR;
         *ptr++    = VERSION_NUM;
         sender_id = htons(sender_id);

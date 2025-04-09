@@ -19,18 +19,22 @@ ssize_t account_handler(message_t *message)
     result = ACCOUNT_ERROR;
     if(message->type == ACC_CREATE)
     {
+        printf("account create\n");
         result = account_create(message);
     }
     else if(message->type == ACC_LOGIN)
     {
+        printf("account login\n");
         result = account_login(message);
     }
     else if(message->type == ACC_EDIT)
     {
+        printf("account edit\n");
         result = account_edit(message);
     }
     else if(message->type == ACC_LOGOUT)
     {
+        printf("account logout\n");
         result = account_logout(message);
     }
     return result;
