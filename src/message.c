@@ -192,7 +192,6 @@ void handle_connections(int server_fd)
         perror("Failed to sync user database");
         goto exit;
     }
-    dbm_close(meta_db.db);
 
 exit:
     store_int(meta_db.db, "USER_PK", user_index);
@@ -519,19 +518,12 @@ static ssize_t send_error_response(message_t *message)
     {
         perror("Failed to send error response");
         sfree(&message->req_buf);
-        close(message->client->fd);
-        message->client->fd     = -1;
-        message->client->events = 0;
-        *message->client_id     = -1;
         return -1;
     }
 
     printf("Response: %s\n", (char *)message->res_buf);
     sfree(&message->req_buf);
-    close(message->client->fd);
-    message->client->fd     = -1;
-    message->client->events = 0;
-    *message->client_id     = -1;
+
     return 0;
 }
 
