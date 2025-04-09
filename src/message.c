@@ -174,6 +174,7 @@ void handle_connections(int server_fd)
             {
                 if(fds[i].revents & POLLIN)
                 {
+                    printf("polling client#%d\n", client_id[i]);
                     message.fds          = fds;
                     message.client       = &fds[i];
                     message.client_id    = &client_id[i];
