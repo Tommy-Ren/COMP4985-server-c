@@ -117,6 +117,7 @@ void handle_connections(int server_fd)
             int                     client_fd;
             struct sockaddr_storage client_addr;
             socklen_t               client_addr_len = sizeof(client_addr);
+            int                     flags;
 
             client_added = 0;
 
@@ -129,6 +130,20 @@ void handle_connections(int server_fd)
                     goto exit;
                 }
                 perror("accept error");
+                continue;
+            }
+
+            flags = fcntl(client_fd, F_GETFL, 0);
+            if(flags == -1)
+            {
+                perror("fcntl (get flags) error");
+                close(client_fd);
+                continue;
+            }
+            if(fcntl(client_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+            {
+                perror("fcntl (set non-blocking) error");
+                close(client_fd);
                 continue;
             }
 
